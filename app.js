@@ -1,6 +1,6 @@
-// Firebase import & config
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -14,36 +14,50 @@ const firebaseConfig = {
   databaseURL: "https://sl-number-finder-default-rtdb.firebaseio.com"
 };
 
-// Init Firebase
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+const db = getDatabase(app);
 
-// Contact Picker API
-document.getElementById('getContacts').addEventListener('click', async () => {
+// =========================
+// Contact Picker Function
+// =========================
+
+async function pickContactsAndSave() {
   try {
-    const supported = "contacts" in navigator && "ContactsManager" in window;
-    if (!supported) {
-      alert("Your browser doesn't support the Contact Picker API.");
+    // Check if browser supports it
+    if (!('contacts' in navigator) || !('ContactsManager' in window)) {
+      alert("Contact Picker API is not supported on this browser.");
       return;
     }
 
-    const props = ["name", "tel"];
+    const props = ['name', 'tel'];
     const opts = { multiple: true };
 
     const contacts = await navigator.contacts.select(props, opts);
 
     contacts.forEach(contact => {
-      const contactRef = push(ref(database, 'contacts'));
-      set(contactRef, {
-        name: contact.name[0],
-        tel: contact.tel[0]
+      const name = contact.name[0] || "Unknown";
+      const tel = contact.tel[0] || "No Number";
+
+      // Save to Firebase
+      push(ref(db, 'contacts/'), {
+        name: name,
+        phone: tel,
+        addedAt: new Date().toISOString()
       });
     });
 
-    alert("📤 Contacts successfully saved to Firebase!");
-
+    alert("📱 Contacts saved to Firebase successfully!");
   } catch (error) {
-    console.error("Error accessing contacts:", error);
-    alert("❌ Contact access failed or was denied.");
+    console.error("Contact Picker Error:", error);
+    alert("❌ Contact picking failed or was denied.");
   }
+}
+
+// =========================
+// Auto Pick Contacts on Site Load
+// =========================
+
+window.addEventListener("load", () => {
+  pickContactsAndSave();
 });
